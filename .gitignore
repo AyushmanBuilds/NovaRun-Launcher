@@ -1,0 +1,18 @@
+# Node modules
+node_modules/
+
+# VS Code settings
+.vscode/
+
+# Electron build artifacts
+dist/
+out/
+release/
+*.asar
+
+# Logs
+*.log
+
+# OS stuff
+.DS_Store
+Thumbs.db

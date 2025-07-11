@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NovaRun Launcher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="launcher" id="launcher">
+   <div class="title-bar">
+  <div class="macos-buttons">
+    <div class="btn red" id="closeBtn"></div>
+    <div class="btn yellow" id="minimizeBtn"></div>
+    <div class="btn green" id="maximizeBtn"></div>
+  </div>
+</div>
+    <div class="version-label" id="version"></div>
+
+    <h1 class="title">NovaRun Launcher by Ayushman</h1>
+
+    <div class="input-bar">
+      <span>🔍</span>
+      <input type="text" placeholder="Type a command…" id="commandInput" autocomplete="off" />
+    </div>
+
+    <div class="results" id="results"></div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

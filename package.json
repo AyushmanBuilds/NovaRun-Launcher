@@ -1,0 +1,30 @@
+{
+  "name": "novarun-launcher",
+  "version": "1.0.0",
+  "main": "main.js",
+  "description": "A macOS-style command launcher by Ayushman",
+  "author": "Ayushman Acharya",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.ayushman.novarun",
+    "productName": "NovaRun Launcher",
+    "files": [
+      "**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  },
+  "dependencies": {
+    "electron": "^27.0.0",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.1"
+  }
+}
