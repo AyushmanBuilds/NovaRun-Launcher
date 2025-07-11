@@ -159,7 +159,24 @@ ipcMain.on('maximize-window', () => {
   });
 });
 
-  autoUpdater.checkForUpdatesAndNotify(); // ✅ Auto-update on launch
+  app.whenReady().then(() => {
+  autoUpdater.checkForUpdatesAndNotify();
+});
+
+autoUpdater.on('update-downloaded', () => {
+  const { dialog } = require('electron');
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Ready',
+    message: 'A new version has been downloaded. Restart NovaRun to apply the update?',
+    buttons: ['Restart', 'Later']
+  }).then(result => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+});
+
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -178,3 +195,7 @@ ipcMain.handle('get-open-apps', async () => {
   });
 });
 
+autoUpdater.on('download-progress', (progress) => {
+  console.log(`Download speed: ${progress.bytesPerSecond}`);
+  console.log(`Downloaded ${progress.percent}%`);
+});

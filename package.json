@@ -9,22 +9,25 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
-  "build": {
-    "appId": "com.ayushman.novarun",
-    "productName": "NovaRun Launcher",
-    "files": [
-      "**/*"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    }
+ "build": {
+  "appId": "com.ayushman.novarun",
+  "productName": "NovaRun Launcher",
+  "files": ["**/*"],
+  "publish": {
+    "provider": "github",
+    "owner": "AyushmanBuilds",
+    "repo": "NovaRun-Launcher"
   },
-  "dependencies": {
-    "electron": "^27.0.0",
-    "electron-updater": "^6.6.2"
-  },
+  "win": {
+    "target": "zip", 
+    "signAndEditExecutable": false, 
+    "sign": false 
+  }
+},
   "devDependencies": {
-    "electron-builder": "^24.13.1"
+    "electron": "^27.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-updater": "^6.6.2",
+    "rcedit": "^4.0.1"
   }
 }
