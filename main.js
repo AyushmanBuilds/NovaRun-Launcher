@@ -159,8 +159,16 @@ ipcMain.on('maximize-window', () => {
   });
 });
 
-  app.whenReady().then(() => {
+app.whenReady().then(() => {
   autoUpdater.checkForUpdatesAndNotify();
+
+  app.setLoginItemSettings({
+    openAtLogin: true,           // ✅ Auto-start with Windows boot
+    path: app.getPath('exe'),    // ✅ Ensure proper path to your .exe
+    openAsHidden: true           // ✅ Optional: launch in background without window
+  });
+
+  createWindow(); // Don't forget this
 });
 
 autoUpdater.on('update-downloaded', () => {
@@ -178,9 +186,10 @@ autoUpdater.on('update-downloaded', () => {
 });
 
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+app.on('window-all-closed', (e) => {
+  e.preventDefault(); // prevents full quit
 });
+
 
 ipcMain.handle('get-open-apps', async () => {
   return new Promise((resolve) => {
