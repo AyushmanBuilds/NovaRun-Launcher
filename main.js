@@ -9,92 +9,6 @@ app.commandLine.appendSwitch('disable-features', 'Windows10CustomTitlebar');
 
 let mainWindow;
 
-// Prevent app from quitting when window is closed
-app.on('window-all-closed', (e) => {
-  e.preventDefault();
-});
-
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 600,
-    height: 400,
-    transparent: true,
-    frame: false,
-    show: false, // Don't show initially
-    skipTaskbar: true,
-    titleBarStyle: 'hidden',
-    alwaysOnTop: false,
-    hasShadow: true,
-    resizable: true,
-    webPreferences: {
-      contextIsolation: true,
-      backgroundThrottling: false,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
-
-  mainWindow.loadFile('index.html');
-
-  // Handle hiding instead of destroying the window
-  mainWindow.on('close', (e) => {
-    e.preventDefault();
-    mainWindow.hide();
-  });
-}
-
-function logEvent(eventName, detail = '') {
-  const line = `[${new Date().toISOString()}] ${eventName}: ${detail}\n`;
-  fs.appendFileSync('analytics.log', line);
-}
-
-app.whenReady().then(() => {
-  createWindow();
-  logEvent('App Launched');
-
-  globalShortcut.register('Alt+N', () => {
-    if (!mainWindow) return;
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
-
-  app.setLoginItemSettings({
-    openAtLogin: true,
-    path: app.getPath('exe'),
-    openAsHidden: true
-  });
-
-  autoUpdater.checkForUpdatesAndNotify();
-});
-
-// Command runner
-ipcMain.on('run-command', (_, command) => {
-  exec(command, { shell: 'cmd.exe' });
-});
-
-// Suggestions
-ipcMain.handle('get-suggestions', () => {
-  return [...baseSuggestions, ...getInstalledApps()];
-});
-
-// Open apps
-ipcMain.handle('get-open-apps', async () => {
-  return new Promise((resolve) => {
-    exec('tasklist /FO CSV /NH', (err, stdout) => {
-      if (err) return resolve([]);
-      const processes = stdout.split('\r\n').map(line => {
-        const cols = line.split('","').map(s => s.replace(/^"|"$/g, ''));
-        return cols[0];
-      }).filter(Boolean);
-      resolve(Array.from(new Set(processes)));
-    });
-  });
-});
-
-// Built-in commands
 const baseSuggestions = [
   {
     text: "Open Chrome",
@@ -114,12 +28,12 @@ const baseSuggestions = [
   {
     text: "Turn Off Wi-Fi",
     match: ["wifi", "disable wifi", "turn off wifi"],
-    command: `powershell -Command "Start-Process powershell -ArgumentList 'Disable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\\$false' -Verb RunAs"`
+    command: `powershell -Command "Start-Process powershell -ArgumentList 'Disable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
   },
   {
     text: "Turn On Wi-Fi",
     match: ["wifi", "enable wifi", "turn on wifi"],
-    command: `powershell -Command "Start-Process powershell -ArgumentList 'Enable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\\$false' -Verb RunAs"`
+    command: `powershell -Command "Start-Process powershell -ArgumentList 'Enable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
   },
   {
     text: "Restart PC",
@@ -133,7 +47,7 @@ const baseSuggestions = [
   }
 ];
 
-// Dynamic apps
+// 🔍 Get Start Menu Shortcuts
 function getInstalledApps() {
   const dirs = [
     path.join(process.env.APPDATA, 'Microsoft\\Windows\\Start Menu\\Programs'),
@@ -164,7 +78,111 @@ function getInstalledApps() {
   return apps;
 }
 
-// Auto update events
+// 🪟 Create Launcher Window
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 600,
+    height: 400,
+    transparent: true,
+    frame: false,
+    titleBarStyle: 'hidden',
+    alwaysOnTop: false,
+    resizable: true,
+    hasShadow: true,
+    show: false, // important: don't auto-show
+    webPreferences: {
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+ mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+// 📦 App Startup + Global Shortcuts
+app.whenReady().then(() => {
+  const dynamicApps = getInstalledApps();
+
+  createWindow();
+
+  globalShortcut.register('Alt+N', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow(); // recreate if closed
+    }
+
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+
+  ipcMain.handle('get-suggestions', () => {
+    return [...baseSuggestions, ...dynamicApps];
+  });
+
+  ipcMain.handle('get-open-apps', async () => {
+    return new Promise((resolve) => {
+      exec('tasklist /FO CSV /NH', (err, stdout) => {
+        if (err) return resolve([]);
+        const processes = stdout.split('\r\n').map(line => {
+          const cols = line.split('","').map(s => s.replace(/^"|"$/g, ''));
+          return cols[0];
+        }).filter(Boolean);
+        resolve(Array.from(new Set(processes)));
+      });
+    });
+  });
+
+  ipcMain.on('run-command', (_, command) => {
+    exec(command, { shell: 'cmd.exe' }, (err) => {
+      if (err) console.error("Command failed:", err.message);
+    });
+  });
+
+  ipcMain.on('close-window', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.hide(); // ✅ hide instead of close
+    }
+  });
+
+  ipcMain.on('minimize-window', () => {
+    if (mainWindow) mainWindow.minimize();
+  });
+
+  ipcMain.on('maximize-window', () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.restore();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+
+  // ✅ Auto start with Windows
+  app.setLoginItemSettings({
+    openAtLogin: true,
+    path: app.getPath('exe'),
+    openAsHidden: true
+  });
+
+  // ✅ Check for updates
+  autoUpdater.checkForUpdatesAndNotify();
+});
+
+// 🧯 Prevent full quit on close
+app.on('window-all-closed', (e) => {
+  e.preventDefault();
+});
+
+// 🔄 AutoUpdater events
 autoUpdater.on('update-downloaded', () => {
   const { dialog } = require('electron');
   dialog.showMessageBox({
@@ -180,6 +198,5 @@ autoUpdater.on('update-downloaded', () => {
 });
 
 autoUpdater.on('download-progress', (progress) => {
-  console.log(`Download speed: ${progress.bytesPerSecond}`);
-  console.log(`Downloaded ${progress.percent}%`);
+  console.log(`Downloaded ${progress.percent}% (${progress.bytesPerSecond} B/s)`);
 });
