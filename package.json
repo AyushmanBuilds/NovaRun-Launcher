@@ -1,6 +1,6 @@
 {
   "name": "novarun-launcher",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "main.js",
   "description": "A macOS-style command launcher by Ayushman",
   "author": "Ayushman Acharya",
