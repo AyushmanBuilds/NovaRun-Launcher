@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { exec } = require('child_process');
 const path = require('path');
@@ -8,24 +8,11 @@ const os = require('os');
 app.commandLine.appendSwitch('disable-features', 'Windows10CustomTitlebar');
 
 let mainWindow;
-let dynamicApps = [];
 
 const baseSuggestions = [
-  {
-    text: "Open Chrome",
-    match: ["chrome", "google"],
-    command: "start chrome"
-  },
-  {
-    text: "Open Edge",
-    match: ["edge", "microsoft"],
-    command: "start msedge"
-  },
-  {
-    text: "Open Downloads",
-    match: ["downloads"],
-    command: `start "" "${os.homedir()}\\Downloads"`
-  },
+  { text: "Open Chrome", match: ["chrome", "google"], command: "start chrome" },
+  { text: "Open Edge", match: ["edge", "microsoft"], command: "start msedge" },
+  { text: "Open Downloads", match: ["downloads"], command: `start "" "${os.homedir()}\\Downloads"` },
   {
     text: "Turn Off Wi-Fi",
     match: ["wifi", "disable wifi", "turn off wifi"],
@@ -36,16 +23,8 @@ const baseSuggestions = [
     match: ["wifi", "enable wifi", "turn on wifi"],
     command: `powershell -Command "Start-Process powershell -ArgumentList 'Enable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
   },
-  {
-    text: "Restart PC",
-    match: ["restart", "reboot"],
-    command: "shutdown /r /t 0"
-  },
-  {
-    text: "Shutdown PC",
-    match: ["shutdown", "power off"],
-    command: "shutdown /s /t 0"
-  }
+  { text: "Restart PC", match: ["restart", "reboot"], command: "shutdown /r /t 0" },
+  { text: "Shutdown PC", match: ["shutdown", "power off"], command: "shutdown /s /t 0" }
 ];
 
 function getInstalledApps() {
@@ -78,14 +57,7 @@ function getInstalledApps() {
   return apps;
 }
 
-function logEvent(eventName, detail = '') {
-  const line = `[${new Date().toISOString()}] ${eventName}: ${detail}\n`;
-  fs.appendFileSync('analytics.log', line);
-}
-
 function createWindow() {
-  if (mainWindow && !mainWindow.isDestroyed()) return;
-
   mainWindow = new BrowserWindow({
     width: 600,
     height: 400,
@@ -103,29 +75,24 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // Optional: hide on close instead of destroying
-  mainWindow.on('close', (e) => {
-    e.preventDefault();
-    mainWindow.hide();
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 }
 
 app.whenReady().then(() => {
-  logEvent('App Launched');
-  dynamicApps = getInstalledApps();
+  const dynamicApps = getInstalledApps();
+
   createWindow();
 
-  // Register global shortcut safely
   globalShortcut.register('Alt+N', () => {
     if (!mainWindow || mainWindow.isDestroyed()) {
       createWindow();
+    } else if (mainWindow.isVisible()) {
+      mainWindow.hide();
     } else {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 
@@ -152,7 +119,6 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('run-command', (_, command) => {
-    logEvent('Command Run', command);
     exec(command, { shell: 'cmd.exe' }, (err) => {
       if (err) console.error("Failed to run command:", err.message);
     });
@@ -178,26 +144,22 @@ app.whenReady().then(() => {
     path: app.getPath('exe'),
     openAsHidden: true
   });
+});
 
-  autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Update Ready',
-      message: 'A new version has been downloaded. Restart NovaRun to apply the update?',
-      buttons: ['Restart', 'Later']
-    }).then(result => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
-  });
-
-  autoUpdater.on('download-progress', (progress) => {
-    console.log(`Download speed: ${progress.bytesPerSecond}`);
-    console.log(`Downloaded ${progress.percent}%`);
+autoUpdater.on('update-downloaded', () => {
+  const { dialog } = require('electron');
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Ready',
+    message: 'A new version has been downloaded. Restart NovaRun to apply the update?',
+    buttons: ['Restart', 'Later']
+  }).then(result => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
   });
 });
 
 app.on('window-all-closed', (e) => {
-  e.preventDefault(); // Keep app running in tray/background
+  e.preventDefault(); // keeps app running in background
 });
