@@ -76,8 +76,8 @@ function createWindow() {
   mainWindow.loadFile('index.html');
 
   mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow = null;
+});
 }
 
 app.whenReady().then(() => {
@@ -85,16 +85,24 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  globalShortcut.register('Alt+N', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      createWindow();
-    } else if (mainWindow.isVisible()) {
+ globalShortcut.register('Alt+N', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+    return;
+  }
+
+  try {
+    if (mainWindow.isVisible()) {
       mainWindow.hide();
     } else {
       mainWindow.show();
       mainWindow.focus();
     }
-  });
+  } catch (e) {
+    console.error('Error toggling window:', e);
+  }
+});
+
 
   ipcMain.handle('get-suggestions', () => {
     return [...baseSuggestions, ...dynamicApps];
