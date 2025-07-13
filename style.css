@@ -176,3 +176,117 @@ body::-webkit-scrollbar {
     transform: scale(1);
   }
 }
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 6px 14px;
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #00ffff;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  -webkit-app-region: no-drag;
+}
+/* 🌐 Navigation Bar */
+.nav-bar {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 8px 16px;
+  margin-bottom: 18px;
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 16px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #00ffff;
+}
+
+.nav-btn.active {
+  background: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+/* 🔁 Tab Switching Logic */
+.tab-content {
+  display: none;
+  animation: fadeInTab 0.25s ease-in-out;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* ✨ Fade-in Animation for Tabs */
+@keyframes fadeInTab {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.performance-meters {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.meter {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.meter svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.meter .bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 3.8;
+}
+
+.meter .progress {
+  fill: none;
+  stroke: #00ffff;
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.meter .label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+

@@ -136,6 +136,26 @@ app.whenReady().then(() => {
     });
   });
 
+  ipcMain.handle('get-system-stats', () => {
+ const si = require('systeminformation');
+
+ipcMain.handle('get-system-stats', async () => {
+  const cpu = await si.currentLoad();
+  const mem = await si.mem();
+
+  return {
+    cpu: Math.round(cpu.currentload),
+    ram: Math.round((mem.active / mem.total) * 100)
+  };
+});
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMemPercent = Math.round(((totalMem - freeMem) / totalMem) * 100);
+
+  return { cpu: cpuPercent, ram: usedMemPercent };
+});
+
+
   // Auto update
   autoUpdater.checkForUpdatesAndNotify();
 
