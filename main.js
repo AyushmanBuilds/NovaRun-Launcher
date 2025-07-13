@@ -1,14 +1,14 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-// ✅ Add this line right after importing Electron
 app.commandLine.appendSwitch('disable-features', 'Windows10CustomTitlebar');
 
 let mainWindow;
+let dynamicApps = [];
 
 const baseSuggestions = [
   {
@@ -27,15 +27,15 @@ const baseSuggestions = [
     command: `start "" "${os.homedir()}\\Downloads"`
   },
   {
-  text: "Turn Off Wi-Fi",
-  match: ["wifi", "disable wifi", "turn off wifi"],
-  command: `powershell -Command "Start-Process powershell -ArgumentList 'Disable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
-},
-{
-  text: "Turn On Wi-Fi",
-  match: ["wifi", "enable wifi", "turn on wifi"],
-  command: `powershell -Command "Start-Process powershell -ArgumentList 'Enable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
-},
+    text: "Turn Off Wi-Fi",
+    match: ["wifi", "disable wifi", "turn off wifi"],
+    command: `powershell -Command "Start-Process powershell -ArgumentList 'Disable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
+  },
+  {
+    text: "Turn On Wi-Fi",
+    match: ["wifi", "enable wifi", "turn on wifi"],
+    command: `powershell -Command "Start-Process powershell -ArgumentList 'Enable-NetAdapter -Name \\"Wi-Fi\\" -Confirm:\$false' -Verb RunAs"`
+  },
   {
     text: "Restart PC",
     match: ["restart", "reboot"],
@@ -48,7 +48,6 @@ const baseSuggestions = [
   }
 ];
 
-// 🧠 Fetch Start Menu shortcuts (.lnk)
 function getInstalledApps() {
   const dirs = [
     path.join(process.env.APPDATA, 'Microsoft\\Windows\\Start Menu\\Programs'),
@@ -79,52 +78,54 @@ function getInstalledApps() {
   return apps;
 }
 
-function createWindow() {
- mainWindow = new BrowserWindow({
-  width: 600,
-  height: 400,
-  transparent: true,
-  frame: false,
-  titleBarStyle: 'hidden',  // ✅ hide title bar cleanly
-  trafficLightPosition: { x: 0, y: 0 }, // optional: affects Mac only
-  alwaysOnTop: false,
-  resizable: true,
-  hasShadow: true, // Optional: removes Windows border shadow if seen
-  webPreferences: {
-    contextIsolation: true,
-    preload: path.join(__dirname, 'preload.js')
-  }
-});
-
-
-  mainWindow.loadFile('index.html');
-}
-
 function logEvent(eventName, detail = '') {
   const line = `[${new Date().toISOString()}] ${eventName}: ${detail}\n`;
   fs.appendFileSync('analytics.log', line);
 }
 
+function createWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) return;
+
+  mainWindow = new BrowserWindow({
+    width: 600,
+    height: 400,
+    transparent: true,
+    frame: false,
+    titleBarStyle: 'hidden',
+    alwaysOnTop: false,
+    resizable: true,
+    hasShadow: true,
+    webPreferences: {
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  mainWindow.loadFile('index.html');
+
+  // Optional: hide on close instead of destroying
+  mainWindow.on('close', (e) => {
+    e.preventDefault();
+    mainWindow.hide();
+  });
+}
+
 app.whenReady().then(() => {
   logEvent('App Launched');
-});
-ipcMain.on('run-command', (_, command) => {
-  logEvent('Command Run', command);
-  exec(command, { shell: 'cmd.exe' });
-});
-
-// 🚀 App lifecycle
-app.whenReady().then(() => {
-  const dynamicApps = getInstalledApps();
-
+  dynamicApps = getInstalledApps();
   createWindow();
 
- globalShortcut.register('Alt+N', () => {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
+  // Register global shortcut safely
+  globalShortcut.register('Alt+N', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow();
     } else {
-      mainWindow.show();
-      mainWindow.focus();
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
     }
   });
 
@@ -133,78 +134,70 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('close-window', () => {
-  if (mainWindow) mainWindow.close();
-});
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+  });
 
-ipcMain.on('minimize-window', () => {
-  if (mainWindow) mainWindow.minimize();
-});
+  ipcMain.on('minimize-window', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+  });
 
-ipcMain.on('maximize-window', () => {
-  if (mainWindow) {
-    if (mainWindow.isMaximized()) {
-      mainWindow.restore();
-    } else {
-      mainWindow.maximize();
+  ipcMain.on('maximize-window', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.restore();
+      } else {
+        mainWindow.maximize();
+      }
     }
-  }
-});
+  });
 
   ipcMain.on('run-command', (_, command) => {
+    logEvent('Command Run', command);
     exec(command, { shell: 'cmd.exe' }, (err) => {
-      if (err) {
-        console.error("Failed to run command:", err.message);
-      }
+      if (err) console.error("Failed to run command:", err.message);
     });
   });
-});
 
-app.whenReady().then(() => {
+  ipcMain.handle('get-open-apps', async () => {
+    return new Promise((resolve) => {
+      exec('tasklist /FO CSV /NH', (err, stdout) => {
+        if (err) return resolve([]);
+        const processes = stdout.split('\r\n').map(line => {
+          const cols = line.split('","').map(s => s.replace(/^"|"$/g, ''));
+          return cols[0];
+        }).filter(Boolean);
+        resolve(Array.from(new Set(processes)));
+      });
+    });
+  });
+
   autoUpdater.checkForUpdatesAndNotify();
 
   app.setLoginItemSettings({
-    openAtLogin: true,           // ✅ Auto-start with Windows boot
-    path: app.getPath('exe'),    // ✅ Ensure proper path to your .exe
-    openAsHidden: true           // ✅ Optional: launch in background without window
+    openAtLogin: true,
+    path: app.getPath('exe'),
+    openAsHidden: true
   });
 
-  createWindow(); // Don't forget this
-});
-
-autoUpdater.on('update-downloaded', () => {
-  const { dialog } = require('electron');
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Ready',
-    message: 'A new version has been downloaded. Restart NovaRun to apply the update?',
-    buttons: ['Restart', 'Later']
-  }).then(result => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
-});
-
-
-app.on('window-all-closed', (e) => {
-  e.preventDefault(); // prevents full quit
-});
-
-
-ipcMain.handle('get-open-apps', async () => {
-  return new Promise((resolve) => {
-    exec('tasklist /FO CSV /NH', (err, stdout) => {
-      if (err) return resolve([]);
-      const processes = stdout.split('\r\n').map(line => {
-        const cols = line.split('","').map(s => s.replace(/^"|"$/g, ''));
-        return cols[0]; // process name
-      }).filter(Boolean);
-      resolve(Array.from(new Set(processes)));
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version has been downloaded. Restart NovaRun to apply the update?',
+      buttons: ['Restart', 'Later']
+    }).then(result => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
     });
   });
+
+  autoUpdater.on('download-progress', (progress) => {
+    console.log(`Download speed: ${progress.bytesPerSecond}`);
+    console.log(`Downloaded ${progress.percent}%`);
+  });
 });
 
-autoUpdater.on('download-progress', (progress) => {
-  console.log(`Download speed: ${progress.bytesPerSecond}`);
-  console.log(`Downloaded ${progress.percent}%`);
+app.on('window-all-closed', (e) => {
+  e.preventDefault(); // Keep app running in tray/background
 });
