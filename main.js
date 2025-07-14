@@ -89,6 +89,9 @@ function logEvent(eventName, detail = '') {
 }
 
 // App ready
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('disable-frame-rate-limit');
 app.whenReady().then(() => {
   logEvent('App Launched');
   const dynamicApps = getInstalledApps();

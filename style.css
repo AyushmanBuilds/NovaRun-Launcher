@@ -289,4 +289,147 @@ body::-webkit-scrollbar {
   text-align: center;
   pointer-events: none;
 }
+/* 🧠 Nav Bar */
+.nav-bar {
+  display: flex;
+  justify-content: space-around;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 10px 20px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+  -webkit-app-region: no-drag;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 6px 14px;
+  border-radius: 12px;
+}
+
+.nav-btn.active {
+  background: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+/* 📊 Circles */
+.circle-container {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 30px;
+}
+
+.circle {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  text-align: center;
+}
+
+.circle-label {
+  position: absolute;
+  top: 28%;
+  left: 0;
+  right: 0;
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* 📌 Fix Input Bar */
+.input-bar {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 🧩 Tab Content */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* 🌀 Improve rendering performance */
+.results {
+  will-change: transform, opacity;
+  contain: layout style paint;
+  backface-visibility: hidden;
+  perspective: 1000;
+}
+
+.input-bar input {
+  will-change: contents;
+}
+
+.nav-bar {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 16px;
+  -webkit-app-region: no-drag;
+}
+
+.nav-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.nav-btn.active {
+  background-color: rgba(0, 255, 255, 0.15);
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+/* 💹 Performance meters */
+.performance-meters {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  margin-top: 40px;
+}
+.meter {
+  width: 100px;
+  height: 100px;
+  position: relative;
+}
+svg {
+  transform: rotate(-90deg);
+}
+.bg {
+  fill: none;
+  stroke: #333;
+  stroke-width: 3.8;
+}
+.progress {
+  fill: none;
+  stroke: #00ffff;
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+.label {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  color: white;
+  pointer-events: none;
+}
 
