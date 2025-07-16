@@ -433,3 +433,147 @@ svg {
   pointer-events: none;
 }
 
+/* ✅ Container holding fixed command UI */
+.fixed-command-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: transparent;
+}
+
+/* ✅ Scrollable suggestions only */
+.results-container {
+  overflow-y: auto;
+  flex: 1;
+  max-height: 50vh;
+  padding-right: 4px;
+}
+
+.core-meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.core-meter {
+  width: 80px;
+  height: 80px;
+  position: relative;
+}
+
+.core-meter svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.core-meter .bg {
+  fill: none;
+  stroke: #444;
+  stroke-width: 3.2;
+}
+
+.core-meter .progress {
+  fill: none;
+  stroke: #00ffff;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.core-meter .label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  color: white;
+  text-align: center;
+  pointer-events: none;
+}
+
+.center-ram-meter {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.ram-meter {
+  width: 150px;
+  height: 150px;
+  position: relative;
+}
+
+.ram-meter svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ram-meter .label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.core-meters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 20px;
+  padding: 30px;
+  justify-items: center;
+}
+
+.core-meter {
+  width: 80px;
+  height: 80px;
+  position: relative;
+}
+
+.core-meter svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.core-meter .label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 3;
+}
+
+.progress {
+  fill: none;
+  stroke: cyan;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.4s ease;
+}
+
+* {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+.performance-meters,
+#results {
+  contain: layout style paint;
+}
+

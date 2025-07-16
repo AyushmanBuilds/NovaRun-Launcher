@@ -5,15 +5,20 @@ const fs = require('fs');
 const os = require('os');
 const { exec } = require('child_process');
 const log = require('electron-log');
+const si = require('systeminformation');
 
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 
-app.commandLine.appendSwitch('disable-features', 'Windows10CustomTitlebar');
-
+// 🔧 GPU Rendering Optimizations (Place these early)
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('disable-frame-rate-limit');
+app.commandLine.appendSwitch('ignore-gpu-blacklist'); // Optional: enables GPU even on restricted systems
 let mainWindow;
+let updateStarted = false;
 
-// Suggestions
+// ================== Suggestions ===================
 const baseSuggestions = [
   { text: "Open Chrome", match: ["chrome", "google"], command: "start chrome" },
   { text: "Open Edge", match: ["edge", "microsoft"], command: "start msedge" },
@@ -32,7 +37,7 @@ const baseSuggestions = [
   { text: "Shutdown PC", match: ["shutdown", "power off"], command: "shutdown /s /t 0" }
 ];
 
-// App shortcuts
+// ================== Installed Apps Fetch ===================
 function getInstalledApps() {
   const dirs = [
     path.join(process.env.APPDATA, 'Microsoft\\Windows\\Start Menu\\Programs'),
@@ -58,8 +63,9 @@ function getInstalledApps() {
   return apps;
 }
 
+// ================== Create Window ===================
 function createWindow() {
-  if (mainWindow) return; // Don't recreate if already exists
+  if (mainWindow) return;
 
   mainWindow = new BrowserWindow({
     width: 600,
@@ -67,8 +73,8 @@ function createWindow() {
     transparent: true,
     frame: false,
     titleBarStyle: 'hidden',
-    alwaysOnTop: false,
     resizable: true,
+    alwaysOnTop: false,
     hasShadow: true,
     webPreferences: {
       contextIsolation: true,
@@ -83,21 +89,19 @@ function createWindow() {
   });
 }
 
+// ================== Analytics ===================
 function logEvent(eventName, detail = '') {
   const line = `[${new Date().toISOString()}] ${eventName}: ${detail}\n`;
   fs.appendFileSync('analytics.log', line);
 }
 
-// App ready
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
-app.commandLine.appendSwitch('disable-frame-rate-limit');
+// ================== App Ready ===================
 app.whenReady().then(() => {
   logEvent('App Launched');
+
   const dynamicApps = getInstalledApps();
   createWindow();
 
-  // Global shortcut
   globalShortcut.register('Alt+N', () => {
     if (!mainWindow) createWindow();
     if (mainWindow.isDestroyed()) return;
@@ -111,6 +115,8 @@ app.whenReady().then(() => {
     logEvent('Command Run', command);
     exec(command, { shell: 'cmd.exe' });
   });
+
+   ipcMain.handle('get-app-version', () => app.getVersion());
 
   ipcMain.on('close-window', () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
@@ -139,29 +145,35 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('get-system-stats', () => {
- const si = require('systeminformation');
+  ipcMain.handle('get-system-stats', async () => {
+  try {
+    const cpu = await si.currentLoad();
+    const mem = await si.mem();
 
-ipcMain.handle('get-system-stats', async () => {
-  const cpu = await si.currentLoad();
-  const mem = await si.mem();
+    const cores = cpu.cpus.map(c => Math.round(c.load));
+    const cpuLoad = Math.round(cpu.currentload);
+    const ramLoad = Math.round((mem.active / mem.total) * 100);
 
-  return {
-    cpu: Math.round(cpu.currentload),
-    ram: Math.round((mem.active / mem.total) * 100)
-  };
+    return {
+      cpu: cpuLoad,
+      ram: ramLoad,
+      cores
+    };
+  } catch (err) {
+    console.error('Error fetching system stats:', err);
+    return { cpu: 0, ram: 0, cores: [] };
+  }
 });
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMemPercent = Math.round(((totalMem - freeMem) / totalMem) * 100);
-
-  return { cpu: cpuPercent, ram: usedMemPercent };
-});
 
 
-  // Auto update
-  autoUpdater.checkForUpdatesAndNotify();
 
+  // Safe Auto-update Start
+  if (!updateStarted) {
+    updateStarted = true;
+    autoUpdater.checkForUpdatesAndNotify();
+  }
+
+  // Auto-launch on startup
   app.setLoginItemSettings({
     openAtLogin: true,
     path: app.getPath('exe'),
@@ -169,7 +181,7 @@ ipcMain.handle('get-system-stats', async () => {
   });
 });
 
-// AutoUpdater events
+// ================== AutoUpdater Events ===================
 autoUpdater.on('checking-for-update', () => log.info("🔍 Checking for update..."));
 autoUpdater.on('update-available', info => log.info("✅ Update available", info));
 autoUpdater.on('update-not-available', () => log.info("🚫 No update available"));
@@ -186,9 +198,16 @@ autoUpdater.on('update-downloaded', () => {
     buttons: ['Restart', 'Later']
   }).then(result => {
     if (result.response === 0) {
+      app.quit(); // Ensures graceful shutdown
       autoUpdater.quitAndInstall();
     }
   });
 });
 
+// Don't quit app on all windows closed
 app.on('window-all-closed', e => e.preventDefault());
+
+// Handle Ctrl+C and graceful quit
+app.on('before-quit', () => {
+  globalShortcut.unregisterAll();
+});

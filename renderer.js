@@ -1,9 +1,10 @@
+// ================== Suggestions & Input ==================
 const input = document.getElementById('commandInput');
 const results = document.getElementById('results');
 let suggestions = [];
 let selectedIndex = -1;
+let lastQuery = '';
 
-// 🔁 Initialize Suggestions
 async function initializeSuggestions() {
   const [base, openApps] = await Promise.all([
     window.electronAPI.getSuggestions(),
@@ -27,41 +28,54 @@ async function initializeSuggestions() {
 }
 initializeSuggestions();
 
-// 🔍 Show Suggestions
 function showMatches(query) {
-  const matches = suggestions.filter(s => s.text.toLowerCase().includes(query.toLowerCase()));
-  results.replaceChildren();
-  selectedIndex = -1;
+  lastQuery = query;
+  requestIdleCallback(() => {
+    const matches = suggestions.filter(s =>
+      s.text.toLowerCase().includes(query.toLowerCase())
+    );
 
-  if (!matches.length) return results.classList.remove('show');
-  results.classList.add('show');
+    results.replaceChildren();
+    selectedIndex = -1;
+    if (!matches.length) return results.classList.remove('show');
 
-  const frag = document.createDocumentFragment();
-  for (const s of matches) {
-    const div = document.createElement('div');
-    div.textContent = '> ' + s.text;
-    div.classList.add('suggestion-item');
-    div.addEventListener('click', () => runCommand(s.command));
-    frag.appendChild(div);
-  }
-  results.appendChild(frag);
+    results.classList.add('show');
+
+    const frag = document.createDocumentFragment();
+    matches.forEach((s, idx) => {
+      const div = document.createElement('div');
+      div.textContent = '> ' + s.text;
+      div.className = 'suggestion-item';
+      div.addEventListener('click', () => runCommand(s.command));
+      frag.appendChild(div);
+    });
+    results.appendChild(frag);
+  });
 }
 
-// 🏃‍♂️ Run Command
 function runCommand(cmd) {
   window.electronAPI.runCommand(cmd);
   input.value = '';
-  results.innerHTML = '';
   results.classList.remove('show');
+  results.replaceChildren();
+  selectedIndex = -1;
 }
 
-// 🎯 Input Handlers
-input.addEventListener('input', () => {
-  showMatches(input.value.trim());
-});
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+input.addEventListener('input', debounce(() => {
+  const query = input.value.trim();
+  showMatches(query);
+}, 80));
 
 input.addEventListener('keydown', (e) => {
-  const items = results.querySelectorAll('div');
+  const items = results.querySelectorAll('.suggestion-item');
   if (!items.length) return;
 
   if (e.key === 'ArrowDown') {
@@ -79,22 +93,22 @@ input.addEventListener('keydown', (e) => {
   items.forEach((el, i) => {
     el.classList.toggle('selected', i === selectedIndex);
     if (i === selectedIndex) {
-      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      el.scrollIntoView({ block: 'center', behavior: 'instant' });
     }
   });
 });
 
-// 🔘 Titlebar Controls
+// ================== Window Controls ==================
 document.getElementById('closeBtn').onclick = () => window.electronAPI.closeWindow();
 document.getElementById('minimizeBtn').onclick = () => window.electronAPI.minimizeWindow();
 document.getElementById('maximizeBtn').onclick = () => window.electronAPI.maximizeWindow();
 
-// 🔢 Version
+// ================== Version ==================
 window.electronAPI.getAppVersion().then(v => {
   document.getElementById('version').textContent = `v${v}`;
 });
 
-// 🌐 Tab Switching
+// ================== Tab Switching ==================
 function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(`${tab}Tab`)?.classList.add('active');
@@ -109,30 +123,67 @@ document.querySelectorAll('.nav-btn').forEach(btn =>
 );
 
 document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey) {
-    if (['1', '2', '3'].includes(e.key)) {
-      const tab = { '1': 'commands', '2': 'performance', '3': 'settings' }[e.key];
-      switchTab(tab);
-    }
+  if (e.ctrlKey && ['1', '2', '3'].includes(e.key)) {
+    const tab = { '1': 'commands', '2': 'performance', '3': 'settings' }[e.key];
+    switchTab(tab);
   }
 });
 
-// 📊 Live System Stats (Throttled)
-const cpuText = document.getElementById('cpuText');
+// ================== Performance Meters ==================
 const ramText = document.getElementById('ramText');
-const cpuPath = document.getElementById('cpuPath');
 const ramPath = document.getElementById('ramPath');
+const coreMetersContainer = document.getElementById('coreMeters');
 
 function updateMeter(path, textEl, percent) {
-  path.setAttribute('stroke-dasharray', `${percent}, 100`);
-  textEl.textContent = `${percent}%`;
+  const safe = isNaN(percent) ? 0 : Math.min(Math.max(percent, 0), 100);
+  path.setAttribute('stroke-dasharray', `${safe}, 100`);
+  textEl.textContent = `${safe}%`;
+}
+
+function createCoreMeter(index) {
+  const meter = document.createElement('div');
+  meter.className = 'core-meter';
+  meter.innerHTML = `
+    <svg viewBox="0 0 36 36">
+      <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+      <path id="corePath${index}" class="progress" stroke-dasharray="0, 100"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+    </svg>
+    <div class="label"><span id="coreText${index}">0%</span><br>Core ${index + 1}</div>
+  `;
+  return meter;
+}
+
+// ✅ SMOOTH STAT UPDATER
+let lastStats = {};
+let animationFrameId;
+
+function updateStatsSmoothly(newStats) {
+  cancelAnimationFrame(animationFrameId);
+  animationFrameId = requestAnimationFrame(() => {
+    if (!newStats) return;
+
+    // RAM
+    updateMeter(ramPath, ramText, newStats.ram);
+
+    // Init core meters if not done
+    if (coreMetersContainer.childElementCount === 0 && newStats.cores?.length) {
+      newStats.cores.forEach((_, i) => {
+        coreMetersContainer.appendChild(createCoreMeter(i));
+      });
+    }
+
+    // Update cores
+    newStats.cores?.forEach((usage, i) => {
+      const path = document.getElementById(`corePath${i}`);
+      const text = document.getElementById(`coreText${i}`);
+      if (path && text) updateMeter(path, text, usage);
+    });
+
+    lastStats = newStats;
+  });
 }
 
 setInterval(() => {
-  window.electronAPI.getSystemStats?.().then(stats => {
-    if (stats) {
-      updateMeter(cpuPath, cpuText, stats.cpu);
-      updateMeter(ramPath, ramText, stats.ram);
-    }
-  });
-}, 1500); // smoother throttle
+  window.electronAPI.getSystemStats?.().then(updateStatsSmoothly);
+}, 1200);

@@ -15,49 +15,51 @@
       <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
     </div>
 
-    <!-- 🔄 Commands Tab -->
-    <div class="tab-content active" id="commandsTab">
-      <div class="title-bar">
-        <div class="macos-buttons">
-          <div class="btn red" id="closeBtn"></div>
-          <div class="btn yellow" id="minimizeBtn"></div>
-          <div class="btn green" id="maximizeBtn"></div>
-        </div>
+   <!-- 🔄 Commands Tab -->
+<div class="tab-content active" id="commandsTab">
+  <div class="fixed-command-header">
+    <div class="title-bar">
+      <div class="macos-buttons">
+        <div class="btn red" id="closeBtn"></div>
+        <div class="btn yellow" id="minimizeBtn"></div>
+        <div class="btn green" id="maximizeBtn"></div>
       </div>
-
-      <div class="version-label" id="version"></div>
-      <h1 class="title">NovaRun Launcher by Ayushman</h1>
-
-      <div class="input-bar">
-        <span>🔍</span>
-        <input type="text" placeholder="Type a command…" id="commandInput" autocomplete="off" />
-      </div>
-
-      <div class="results" id="results"></div>
     </div>
 
-    <!-- 📊 Performance Tab -->
-    <div class="tab-content" id="performanceTab">
-      <div class="performance-meters">
-  <div class="meter">
-    <svg viewBox="0 0 36 36">
-      <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-      <path id="cpuPath" class="progress" stroke-dasharray="0, 100"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-    </svg>
-    <div class="label"><span id="cpuText">0%</span><br>CPU</div>
+    <div class="version-label" id="version"></div>
+    <h1 class="title">NovaRun Launcher by Ayushman</h1>
+
+    <div class="input-bar">
+      <span>🔍</span>
+      <input type="text" placeholder="Type a command…" id="commandInput" autocomplete="off" />
+    </div>
   </div>
 
-  <div class="meter">
-    <svg viewBox="0 0 36 36">
-      <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-      <path id="ramPath" class="progress" stroke-dasharray="0, 100"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-    </svg>
-    <div class="label"><span id="ramText">0%</span><br>RAM</div>
+  <!-- 🔽 Scrollable Results -->
+  <div class="results-container">
+    <div class="results" id="results"></div>
   </div>
 </div>
+
+
+   <!-- 📊 Performance Tab -->
+<div class="tab-content" id="performanceTab">
+  <div class="center-ram-meter">
+    <div class="ram-meter">
+      <svg viewBox="0 0 36 36">
+        <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+        <path id="ramPath" class="progress" stroke-dasharray="0, 100"
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+      </svg>
+      <div class="label"><span id="ramText">0%</span><br>RAM Usage</div>
     </div>
+  </div>
+
+  <div id="coreMeters" class="core-meters-grid">
+    <!-- Dynamically generated core meters -->
+  </div>
+</div>
+
 
     <!-- ⚙️ Settings Tab -->
     <div class="tab-content" id="settingsTab">
